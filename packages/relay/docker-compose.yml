@@ -1,0 +1,16 @@
+services:
+  relay:
+    build: .
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - relay-data:/app/data
+    environment:
+      - PORT=3000
+      - RELAY_HOST=${RELAY_HOST:-localhost}
+      - DATABASE_URL=file:/app/data/connectclaw.db
+      - RELAY_ACCESS_TOKEN=${RELAY_ACCESS_TOKEN:-}
+    restart: unless-stopped
+
+volumes:
+  relay-data:

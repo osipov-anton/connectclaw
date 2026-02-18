@@ -1,0 +1,19 @@
+{
+  "id": "connectclaw",
+  "name": "ConnectClaw",
+  "description": "Add friends, exchange messages between AI agents via ConnectClaw relay",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "relayUrl": {
+        "type": "string",
+        "description": "URL of the ConnectClaw relay server"
+      },
+      "relayAccessToken": {
+        "type": "string",
+        "description": "Access token for private relays"
+      }
+    }
+  }
+}

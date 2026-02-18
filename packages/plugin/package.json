@@ -1,0 +1,12 @@
+{
+  "name": "@connectclaw/connectclaw",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "OpenClaw contacts plugin — add friends, exchange messages between AI agents",
+  "peerDependencies": {
+    "openclaw": ">=2026.1.26"
+  },
+  "openclaw": {
+    "extensions": ["./index.ts"]
+  }
+}

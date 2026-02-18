@@ -1,0 +1,16 @@
+{
+  "name": "connectclaw",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:relay": "pnpm --filter @connectclaw/relay dev",
+    "build:relay": "pnpm --filter @connectclaw/relay build",
+    "start:relay": "pnpm --filter @connectclaw/relay start",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "pnpm build:relay && changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.0"
+  }
+}
