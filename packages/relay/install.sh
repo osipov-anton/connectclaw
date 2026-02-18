@@ -159,14 +159,46 @@ if [ "$USE_SSL" = "yes" ]; then
   docker compose --profile ssl up -d --build
 
   RELAY_URL="https://$DOMAIN"
+  HEALTH_URL="http://localhost:3000"
   COMPOSE_CMD="docker compose --profile ssl"
 else
   echo ""
   echo -e "${CYAN}▸${RESET} Starting relay..."
   docker compose up -d --build
 
-  RELAY_URL="http://$(hostname -I 2>/dev/null | awk '{print $1}' || echo 'localhost'):3000"
+  LOCAL_IP="$(hostname -I 2>/dev/null | awk '{print $1}' || echo 'localhost')"
+  RELAY_URL="http://${LOCAL_IP}:3000"
+  HEALTH_URL="http://localhost:3000"
   COMPOSE_CMD="docker compose"
+fi
+
+# --- Wait for relay to be ready ---
+
+MAX_WAIT=60
+WAITED=0
+INTERVAL=2
+
+echo ""
+echo -ne "  ${DIM}Waiting for relay to start...${RESET}"
+
+while [ "$WAITED" -lt "$MAX_WAIT" ]; do
+  if curl -sf "$HEALTH_URL" >/dev/null 2>&1; then
+    echo ""
+    break
+  fi
+  echo -n "."
+  sleep "$INTERVAL"
+  WAITED=$((WAITED + INTERVAL))
+done
+
+if [ "$WAITED" -ge "$MAX_WAIT" ]; then
+  echo ""
+  echo ""
+  echo -e "  ${YELLOW}⚠${RESET}  Relay did not respond within ${MAX_WAIT}s."
+  echo -e "  ${DIM}It may still be building. Check status with:${RESET}"
+  echo -e "    cd $INSTALL_DIR/packages/relay && $COMPOSE_CMD logs -f"
+  echo ""
+  exit 1
 fi
 
 # --- Done ---
@@ -180,11 +212,24 @@ if [ "$USE_SSL" = "yes" ]; then
   echo -e "  ${BOLD}Certs:${RESET}   Auto-provisioned by Let's Encrypt via Caddy"
 fi
 echo ""
-echo -e "  ${DIM}Commands:${RESET}"
-echo -e "    Logs:    cd $INSTALL_DIR/packages/relay && $COMPOSE_CMD logs -f"
-echo -e "    Stop:    cd $INSTALL_DIR/packages/relay && $COMPOSE_CMD down"
-echo -e "    Update:  curl -fsSL https://raw.githubusercontent.com/osipov-anton/connectclaw/main/packages/relay/install.sh | bash"
+
+echo -e "  ${BOLD}━━━ Next steps ━━━${RESET}"
 echo ""
-echo -e "  ${BOLD}Configure your OpenClaw plugin:${RESET}"
-echo -e "    openclaw config set plugins.entries.connectclaw.config.relayUrl \"$RELAY_URL\""
+echo -e "  ${BOLD}1.${RESET} Install the ConnectClaw plugin:"
+echo ""
+echo -e "     ${CYAN}openclaw plugins install @connectclaw/connectclaw${RESET}"
+echo ""
+echo -e "  ${BOLD}2.${RESET} Tell OpenClaw where your relay is:"
+echo ""
+echo -e "     ${CYAN}openclaw config set plugins.entries.connectclaw.config.relayUrl \"$RELAY_URL\"${RESET}"
+echo ""
+echo -e "  ${BOLD}3.${RESET} Sign up from OpenClaw (the AI will do it via the plugin):"
+echo ""
+echo -e "     ${DIM}Just ask your AI: \"Sign me up on ConnectClaw as alice\"${RESET}"
+echo ""
+echo -e "  ${BOLD}━━━ Useful commands ━━━${RESET}"
+echo ""
+echo -e "    Logs:    ${DIM}cd $INSTALL_DIR/packages/relay && $COMPOSE_CMD logs -f${RESET}"
+echo -e "    Stop:    ${DIM}cd $INSTALL_DIR/packages/relay && $COMPOSE_CMD down${RESET}"
+echo -e "    Update:  ${DIM}curl -fsSL https://raw.githubusercontent.com/osipov-anton/connectclaw/main/packages/relay/install.sh | bash${RESET}"
 echo ""
