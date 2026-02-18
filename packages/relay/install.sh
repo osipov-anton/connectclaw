@@ -4,80 +4,187 @@ set -euo pipefail
 REPO="https://github.com/osipov-anton/connectclaw.git"
 INSTALL_DIR="${CONNECTCLAW_DIR:-$HOME/connectclaw}"
 
-echo "=== ConnectClaw Relay Installer ==="
+BOLD="\033[1m"
+DIM="\033[2m"
+GREEN="\033[32m"
+CYAN="\033[36m"
+YELLOW="\033[33m"
+RED="\033[31m"
+RESET="\033[0m"
+
+prompt() {
+  local var="$1" msg="$2"
+  read -rp "$(echo -e "${CYAN}▸${RESET} ${msg}")" "$var" </dev/tty
+}
+
+choose() {
+  local var="$1" msg="$2"
+  shift 2
+  local options=("$@")
+  echo -e "\n${CYAN}▸${RESET} ${msg}"
+  for i in "${!options[@]}"; do
+    echo -e "  ${BOLD}$((i+1)))${RESET} ${options[$i]}"
+  done
+  while true; do
+    read -rp "$(echo -e "  ${DIM}Choice [1-${#options[@]}]:${RESET} ")" choice </dev/tty
+    if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#options[@]} )); then
+      eval "$var=$((choice))"
+      return
+    fi
+    echo -e "  ${RED}Invalid choice, try again.${RESET}"
+  done
+}
+
+echo ""
+echo -e "${BOLD}  ╔══════════════════════════════════════╗${RESET}"
+echo -e "${BOLD}  ║       ConnectClaw Relay Installer     ║${RESET}"
+echo -e "${BOLD}  ╚══════════════════════════════════════╝${RESET}"
 echo ""
 
-# Check Docker
+# --- Check Docker ---
+
 if ! command -v docker &>/dev/null; then
-  echo "Error: Docker is not installed."
-  echo "Install it: https://docs.docker.com/engine/install/"
+  echo -e "${RED}✗${RESET} Docker is not installed."
+  echo -e "  Install it: ${DIM}https://docs.docker.com/engine/install/${RESET}"
   exit 1
 fi
+echo -e "${GREEN}✓${RESET} Docker found"
 
 if ! docker compose version &>/dev/null; then
-  echo "Error: Docker Compose V2 is not available."
-  echo "Install it: https://docs.docker.com/compose/install/"
+  echo -e "${RED}✗${RESET} Docker Compose V2 is not available."
+  echo -e "  Install it: ${DIM}https://docs.docker.com/compose/install/${RESET}"
   exit 1
 fi
+echo -e "${GREEN}✓${RESET} Docker Compose found"
 
-# Ask for domain
+# --- Interactive or env-var mode ---
+
 DOMAIN="${RELAY_HOST:-}"
-if [ -z "$DOMAIN" ]; then
-  read -rp "Domain for the relay (e.g. relay.connectclaw.io): " DOMAIN
-fi
-
-if [ -z "$DOMAIN" ]; then
-  echo "Error: domain is required."
-  exit 1
-fi
-
-# Ask for access token (optional)
 ACCESS_TOKEN="${RELAY_ACCESS_TOKEN:-}"
-if [ -z "$ACCESS_TOKEN" ]; then
-  read -rp "Relay access token (leave empty for open relay): " ACCESS_TOKEN
+USE_SSL=""
+
+if [ -n "$DOMAIN" ]; then
+  USE_SSL="yes"
+  echo ""
+  echo -e "${DIM}Using env vars: RELAY_HOST=$DOMAIN${RESET}"
+else
+  # Ask about domain
+  choose MODE "Do you have a domain pointed to this server?" \
+    "Yes — set up with HTTPS (Caddy + Let's Encrypt)" \
+    "No  — run on port 3000 without HTTPS (for dev/testing)"
+
+  if [ "$MODE" -eq 1 ]; then
+    USE_SSL="yes"
+    echo ""
+    prompt DOMAIN "Enter your domain (e.g. relay.example.com): "
+    if [ -z "$DOMAIN" ]; then
+      echo -e "\n${RED}✗${RESET} Domain cannot be empty."
+      exit 1
+    fi
+  else
+    USE_SSL="no"
+    DOMAIN="localhost"
+  fi
+
+  # Ask about access token
+  choose TOKEN_MODE "Relay access mode:" \
+    "Open  — anyone can sign up" \
+    "Private — require an access token to sign up"
+
+  if [ "$TOKEN_MODE" -eq 2 ]; then
+    echo ""
+    prompt ACCESS_TOKEN "Enter access token: "
+    if [ -z "$ACCESS_TOKEN" ]; then
+      echo -e "\n${RED}✗${RESET} Access token cannot be empty."
+      exit 1
+    fi
+  fi
 fi
 
-# Clone or update
+# --- Summary ---
+
+echo ""
+echo -e "${BOLD}  Configuration:${RESET}"
+if [ "$USE_SSL" = "yes" ]; then
+  echo -e "    Domain:  ${GREEN}$DOMAIN${RESET}"
+  echo -e "    HTTPS:   ${GREEN}Yes${RESET} (Caddy + Let's Encrypt)"
+else
+  echo -e "    Mode:    ${YELLOW}Local / dev${RESET} (port 3000, no HTTPS)"
+fi
+if [ -n "$ACCESS_TOKEN" ]; then
+  echo -e "    Access:  ${YELLOW}Private${RESET} (token required)"
+else
+  echo -e "    Access:  ${GREEN}Open${RESET} (anyone can sign up)"
+fi
+echo ""
+
+prompt CONFIRM "Proceed with installation? [Y/n]: "
+if [[ "$CONFIRM" =~ ^[Nn] ]]; then
+  echo -e "\n${DIM}Aborted.${RESET}"
+  exit 0
+fi
+
+# --- Clone or update ---
+
+echo ""
 if [ -d "$INSTALL_DIR" ]; then
-  echo "Updating existing installation at $INSTALL_DIR..."
+  echo -e "${CYAN}↻${RESET} Updating existing installation at ${DIM}$INSTALL_DIR${RESET}..."
   cd "$INSTALL_DIR"
   git pull --ff-only
 else
-  echo "Cloning ConnectClaw to $INSTALL_DIR..."
+  echo -e "${CYAN}↓${RESET} Cloning ConnectClaw to ${DIM}$INSTALL_DIR${RESET}..."
   git clone "$REPO" "$INSTALL_DIR"
   cd "$INSTALL_DIR"
 fi
 
 cd packages/relay
 
-# Create .env
+# --- Create .env ---
+
 cat > .env <<EOF
 RELAY_HOST=$DOMAIN
 DATABASE_URL=file:/app/data/connectclaw.db
 RELAY_ACCESS_TOKEN=$ACCESS_TOKEN
 EOF
-echo "Created .env"
+echo -e "${GREEN}✓${RESET} Created .env"
 
-# Generate Caddyfile from template
-sed "s/{DOMAIN}/$DOMAIN/g" Caddyfile.template > Caddyfile
-echo "Created Caddyfile for $DOMAIN (auto-HTTPS via Let's Encrypt)"
+# --- Start ---
 
-# Build and start with SSL profile
-echo ""
-echo "Starting ConnectClaw relay with HTTPS..."
-docker compose --profile ssl up -d --build
+if [ "$USE_SSL" = "yes" ]; then
+  sed "s/{DOMAIN}/$DOMAIN/g" Caddyfile.template > Caddyfile
+  echo -e "${GREEN}✓${RESET} Created Caddyfile for ${BOLD}$DOMAIN${RESET}"
+
+  echo ""
+  echo -e "${CYAN}▸${RESET} Starting relay with HTTPS..."
+  docker compose --profile ssl up -d --build
+
+  RELAY_URL="https://$DOMAIN"
+  COMPOSE_CMD="docker compose --profile ssl"
+else
+  echo ""
+  echo -e "${CYAN}▸${RESET} Starting relay..."
+  docker compose up -d --build
+
+  RELAY_URL="http://$(hostname -I 2>/dev/null | awk '{print $1}' || echo 'localhost'):3000"
+  COMPOSE_CMD="docker compose"
+fi
+
+# --- Done ---
 
 echo ""
-echo "=== ConnectClaw relay is running ==="
+echo -e "${BOLD}${GREEN}  ✓ ConnectClaw relay is running!${RESET}"
 echo ""
-echo "  URL:     https://$DOMAIN"
-echo "  Data:    Docker volume 'relay-data'"
-echo "  Certs:   Auto-provisioned by Let's Encrypt via Caddy"
+echo -e "  ${BOLD}URL:${RESET}     $RELAY_URL"
+echo -e "  ${BOLD}Data:${RESET}    Docker volume 'relay-data'"
+if [ "$USE_SSL" = "yes" ]; then
+  echo -e "  ${BOLD}Certs:${RESET}   Auto-provisioned by Let's Encrypt via Caddy"
+fi
 echo ""
-echo "Commands:"
-echo "  Logs:    cd $INSTALL_DIR/packages/relay && docker compose --profile ssl logs -f"
-echo "  Stop:    cd $INSTALL_DIR/packages/relay && docker compose --profile ssl down"
-echo "  Update:  curl -fsSL https://raw.githubusercontent.com/osipov-anton/connectclaw/main/packages/relay/install.sh | bash"
+echo -e "  ${DIM}Commands:${RESET}"
+echo -e "    Logs:    cd $INSTALL_DIR/packages/relay && $COMPOSE_CMD logs -f"
+echo -e "    Stop:    cd $INSTALL_DIR/packages/relay && $COMPOSE_CMD down"
+echo -e "    Update:  curl -fsSL https://raw.githubusercontent.com/osipov-anton/connectclaw/main/packages/relay/install.sh | bash"
 echo ""
-echo "Configure your OpenClaw plugin:"
-echo "  openclaw config set plugins.entries.connectclaw.config.relayUrl \"https://$DOMAIN\""
+echo -e "  ${BOLD}Configure your OpenClaw plugin:${RESET}"
+echo -e "    openclaw config set plugins.entries.connectclaw.config.relayUrl \"$RELAY_URL\""
+echo ""

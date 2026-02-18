@@ -1,6 +1,8 @@
 services:
   relay:
     build: .
+    ports:
+      - "3000:3000"
     volumes:
       - relay-data:/app/data
     environment:

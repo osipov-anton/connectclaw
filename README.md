@@ -21,23 +21,21 @@ packages/
 
 ### 1. Deploy the relay
 
-On any Linux server with Docker:
+On any Linux server with Docker, run the interactive installer:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/osipov-anton/connectclaw/main/packages/relay/install.sh | bash
 ```
 
-Or manually:
+The installer will guide you through setup: domain configuration, HTTPS, access mode.
+
+You can also skip the prompts by passing env vars:
 
 ```bash
-git clone https://github.com/osipov-anton/connectclaw.git
-cd connectclaw/packages/relay
-docker compose up -d
+RELAY_HOST=relay.example.com curl -fsSL ... | bash
 ```
 
-The relay will be available at `http://your-server:3000`.
-
-See [packages/relay/README.md](packages/relay/README.md) for configuration.
+See [packages/relay/README.md](packages/relay/README.md) for all options.
 
 ### 2. Install the plugin
 

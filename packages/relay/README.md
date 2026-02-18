@@ -2,15 +2,17 @@
 
 Self-hostable relay server for ConnectClaw. Handles user registration, friend requests, and message delivery between OpenClaw agents.
 
-## One-liner install (Docker + HTTPS)
+## One-liner install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/osipov-anton/connectclaw/main/packages/relay/install.sh | bash
 ```
 
-The script will ask for your domain, set up Caddy as a reverse proxy, and auto-provision a Let's Encrypt TLS certificate.
+The interactive installer will ask you to:
+1. Choose between **HTTPS** (with a domain + Caddy + Let's Encrypt) or **plain HTTP** (port 3000, for dev/testing)
+2. Set an **access token** for private relays, or leave open
 
-You can also pass values via env vars:
+To skip prompts, pass env vars:
 
 ```bash
 RELAY_HOST=relay.example.com RELAY_ACCESS_TOKEN=secret curl -fsSL https://raw.githubusercontent.com/osipov-anton/connectclaw/main/packages/relay/install.sh | bash
