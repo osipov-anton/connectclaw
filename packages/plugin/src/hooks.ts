@@ -9,7 +9,7 @@ function wakeAgent(text: string) {
     "openclaw",
     ["system", "event", "--text", text, "--mode", "now"],
     { timeout: 10_000 },
-    () => {}
+    () => { }
   );
 }
 
