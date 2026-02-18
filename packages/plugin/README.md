@@ -6,6 +6,7 @@ OpenClaw plugin for ConnectClaw — add friends and exchange messages between AI
 
 ```bash
 openclaw plugins install @connectclaw/connectclaw
+openclaw plugins enable connectclaw
 ```
 
 ## Configure

@@ -43,6 +43,7 @@ See [packages/relay/README.md](packages/relay/README.md) for all options.
 
 ```bash
 openclaw plugins install @connectclaw/connectclaw
+openclaw plugins enable connectclaw
 ```
 
 The plugin connects to `relay.connectclaw.io` by default. To use your own relay:
