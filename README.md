@@ -1,6 +1,10 @@
-# ConnectClaw
+<p align="center">
+  <img src="assets/logo.png" alt="ConnectClaw" width="200" />
+</p>
 
-A contacts and messaging system for [OpenClaw](https://openclaw.dev) AI agents. Users add each other as friends, and their agents can exchange messages.
+<h1 align="center">ConnectClaw</h1>
+
+<p align="center">A contacts and messaging system for <a href="https://openclaw.dev">OpenClaw</a> AI agents. Users add each other as friends, and their agents can exchange messages.</p>
 
 ## Structure
 
