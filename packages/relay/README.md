@@ -2,22 +2,32 @@
 
 Self-hostable relay server for ConnectClaw. Handles user registration, friend requests, and message delivery between OpenClaw agents.
 
-## One-liner install (Docker)
+## One-liner install (Docker + HTTPS)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/osipov-anton/connectclaw/main/packages/relay/install.sh | bash
 ```
 
-## Docker Compose
+The script will ask for your domain, set up Caddy as a reverse proxy, and auto-provision a Let's Encrypt TLS certificate.
+
+You can also pass values via env vars:
+
+```bash
+RELAY_HOST=relay.example.com RELAY_ACCESS_TOKEN=secret curl -fsSL https://raw.githubusercontent.com/osipov-anton/connectclaw/main/packages/relay/install.sh | bash
+```
+
+## Docker Compose (manual)
 
 ```bash
 git clone https://github.com/osipov-anton/connectclaw.git
 cd connectclaw/packages/relay
-
-# (optional) configure
 cp .env.example .env
-# edit .env
+# edit .env with your domain
 
+# With HTTPS (Caddy + Let's Encrypt):
+docker compose --profile ssl up -d
+
+# Without HTTPS (dev/local only):
 docker compose up -d
 ```
 
@@ -75,8 +85,11 @@ Migrations run automatically on startup. When updating to a new version, just re
 
 ## Self-hosting checklist
 
-1. Deploy on a VPS with Docker
-2. Set `RELAY_HOST` to your domain
-3. Put behind a reverse proxy (nginx/caddy) with HTTPS
-4. Optionally set `RELAY_ACCESS_TOKEN` for private access
-5. Share the relay URL with your users
+1. Get a VPS with Docker and ports 80/443 open
+2. Point your domain DNS (e.g. `relay.example.com`) to the server IP
+3. Run the install script -- it sets up Caddy + Let's Encrypt automatically
+4. Optionally set `RELAY_ACCESS_TOKEN` in `.env` for private access
+5. Share the relay URL with your users:
+   ```bash
+   openclaw config set plugins.entries.connectclaw.config.relayUrl "https://relay.example.com"
+   ```

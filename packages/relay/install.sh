@@ -3,8 +3,6 @@ set -euo pipefail
 
 REPO="https://github.com/osipov-anton/connectclaw.git"
 INSTALL_DIR="${CONNECTCLAW_DIR:-$HOME/connectclaw}"
-PORT="${PORT:-3000}"
-RELAY_HOST="${RELAY_HOST:-$(hostname -f 2>/dev/null || echo localhost)}"
 
 echo "=== ConnectClaw Relay Installer ==="
 echo ""
@@ -22,6 +20,23 @@ if ! docker compose version &>/dev/null; then
   exit 1
 fi
 
+# Ask for domain
+DOMAIN="${RELAY_HOST:-}"
+if [ -z "$DOMAIN" ]; then
+  read -rp "Domain for the relay (e.g. relay.connectclaw.io): " DOMAIN
+fi
+
+if [ -z "$DOMAIN" ]; then
+  echo "Error: domain is required."
+  exit 1
+fi
+
+# Ask for access token (optional)
+ACCESS_TOKEN="${RELAY_ACCESS_TOKEN:-}"
+if [ -z "$ACCESS_TOKEN" ]; then
+  read -rp "Relay access token (leave empty for open relay): " ACCESS_TOKEN
+fi
+
 # Clone or update
 if [ -d "$INSTALL_DIR" ]; then
   echo "Updating existing installation at $INSTALL_DIR..."
@@ -35,31 +50,34 @@ fi
 
 cd packages/relay
 
-# Create .env if not exists
-if [ ! -f .env ]; then
-  cat > .env <<EOF
-PORT=$PORT
-RELAY_HOST=$RELAY_HOST
+# Create .env
+cat > .env <<EOF
+RELAY_HOST=$DOMAIN
 DATABASE_URL=file:/app/data/connectclaw.db
-RELAY_ACCESS_TOKEN=
+RELAY_ACCESS_TOKEN=$ACCESS_TOKEN
 EOF
-  echo "Created .env (edit to customize)"
-fi
+echo "Created .env"
 
-# Build and start
+# Generate Caddyfile from template
+sed "s/{DOMAIN}/$DOMAIN/g" Caddyfile.template > Caddyfile
+echo "Created Caddyfile for $DOMAIN (auto-HTTPS via Let's Encrypt)"
+
+# Build and start with SSL profile
 echo ""
-echo "Starting ConnectClaw relay..."
-docker compose up -d --build
+echo "Starting ConnectClaw relay with HTTPS..."
+docker compose --profile ssl up -d --build
 
 echo ""
 echo "=== ConnectClaw relay is running ==="
-echo "  URL:  http://$RELAY_HOST:$PORT"
-echo "  Data: stored in Docker volume 'relay-data'"
+echo ""
+echo "  URL:     https://$DOMAIN"
+echo "  Data:    Docker volume 'relay-data'"
+echo "  Certs:   Auto-provisioned by Let's Encrypt via Caddy"
 echo ""
 echo "Commands:"
-echo "  Logs:    cd $INSTALL_DIR/packages/relay && docker compose logs -f"
-echo "  Stop:    cd $INSTALL_DIR/packages/relay && docker compose down"
-echo "  Update:  curl -fsSL <install-url> | bash"
+echo "  Logs:    cd $INSTALL_DIR/packages/relay && docker compose --profile ssl logs -f"
+echo "  Stop:    cd $INSTALL_DIR/packages/relay && docker compose --profile ssl down"
+echo "  Update:  curl -fsSL https://raw.githubusercontent.com/osipov-anton/connectclaw/main/packages/relay/install.sh | bash"
 echo ""
 echo "Configure your OpenClaw plugin:"
-echo "  relayUrl: \"http://$RELAY_HOST:$PORT\""
+echo "  openclaw config set plugins.entries.connectclaw.config.relayUrl \"https://$DOMAIN\""

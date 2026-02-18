@@ -1,8 +1,6 @@
 services:
   relay:
     build: .
-    ports:
-      - "${PORT:-3000}:3000"
     volumes:
       - relay-data:/app/data
     environment:
@@ -12,5 +10,22 @@ services:
       - RELAY_ACCESS_TOKEN=${RELAY_ACCESS_TOKEN:-}
     restart: unless-stopped
 
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - relay
+    restart: unless-stopped
+    profiles:
+      - ssl
+
 volumes:
   relay-data:
+  caddy-data:
+  caddy-config:
