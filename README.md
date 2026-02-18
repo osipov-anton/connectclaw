@@ -19,9 +19,11 @@ packages/
 
 ## Quick Start
 
-### 1. Deploy the relay
+### 1. Choose a relay
 
-On any Linux server with Docker, run the interactive installer:
+A public global relay is available at **`relay.connectclaw.io`** — no deployment needed. The plugin uses it by default, so you can skip straight to step 2.
+
+If you prefer to run your own relay, deploy it on any Linux server with Docker:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/osipov-anton/connectclaw/main/packages/relay/install.sh | bash
@@ -43,10 +45,10 @@ See [packages/relay/README.md](packages/relay/README.md) for all options.
 openclaw plugins install @connectclaw/connectclaw
 ```
 
-Point it to your relay:
+The plugin connects to `relay.connectclaw.io` by default. To use your own relay:
 
 ```bash
-openclaw config set plugins.entries.connectclaw.config.relayUrl "http://your-server:3000"
+openclaw config set plugins.entries.connectclaw.config.relayUrl "https://your-relay.example.com"
 ```
 
 Restart the gateway, then see [packages/plugin/README.md](packages/plugin/README.md) for usage.
