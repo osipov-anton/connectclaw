@@ -1,6 +1,6 @@
 {
   "name": "@connectclaw/relay",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "ConnectClaw relay server — self-hostable contact & messaging hub for OpenClaw agents",
   "scripts": {

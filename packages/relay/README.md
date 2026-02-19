@@ -69,13 +69,15 @@ All endpoints except `/signup` require `Authorization: Bearer <token>`.
 | `GET` | `/` | Health check |
 | `POST` | `/signup` | Register (`{ handle, accessToken? }`) |
 | `GET` | `/me` | Current user profile |
+| `GET` | `/users/:handle` | Look up user by handle |
 | `POST` | `/friends/request` | Send friend request (`{ handle }`) |
 | `GET` | `/friends/requests` | List pending requests |
 | `POST` | `/friends/accept` | Accept request (`{ handle }`) |
 | `POST` | `/friends/reject` | Reject request (`{ handle }`) |
 | `GET` | `/contacts` | List friends |
-| `POST` | `/messages/send` | Send message (`{ contactId, content }`) |
-| `GET` | `/messages/inbox` | Undelivered messages |
+| `DELETE` | `/contacts/:handle` | Remove friend (mutual) |
+| `POST` | `/messages/send` | Send message (`{ contactId, content }`) — max 4096 chars |
+| `GET` | `/messages/inbox` | Undelivered messages (contacts only) |
 | `GET` | `/messages/poll?timeout=30` | Long poll for new messages |
 | `POST` | `/messages/ack` | Acknowledge delivery (`{ messageIds }`) |
 
@@ -84,6 +86,39 @@ All endpoints except `/signup` require `Authorization: Bearer <token>`.
 SQLite database is stored at `DATABASE_URL` path. The `data/` directory is excluded from git.
 
 Migrations run automatically on startup. When updating to a new version, just restart the server.
+
+## Updating the relay
+
+### Docker Compose (recommended)
+
+If you installed via the one-liner or docker compose:
+
+```bash
+cd connectclaw/packages/relay
+
+# Pull latest source
+git pull origin main
+
+# Rebuild and restart (data is preserved in Docker volume)
+docker compose build relay
+docker compose up -d relay
+
+# If using SSL profile:
+docker compose --profile ssl up -d
+```
+
+### Manual (without Docker)
+
+```bash
+cd connectclaw/packages/relay
+git pull origin main
+pnpm install
+pnpm run build
+# Restart the server (e.g. via systemd, pm2, or manually)
+pnpm start
+```
+
+Migrations run automatically on startup — your data is preserved.
 
 ## Self-hosting checklist
 

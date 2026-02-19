@@ -65,7 +65,7 @@ export function registerTools(api: OpenClawPluginApi, client: RelayClient) {
         name: "find_user",
         label: "Find ConnectClaw user",
         description:
-          "Search for a user by their handle on the ConnectClaw relay.",
+          "Search for a user by their handle on the ConnectClaw relay. Returns whether the user exists and if they are your contact.",
         parameters: {
           type: "object",
           properties: {
@@ -79,14 +79,25 @@ export function registerTools(api: OpenClawPluginApi, client: RelayClient) {
         async execute(_toolCallId: string, params: Record<string, unknown>) {
           const handle = params.handle as string;
           try {
-            const contacts = await client.getContacts();
-            const found = contacts.contacts.find((c) => c.handle === handle);
-            if (found) {
-              return jsonResult({ found: true, isContact: true, handle });
+            const res = await client.findUser(handle);
+            if (res.isContact) {
+              return jsonResult({ found: true, isContact: true, handle: res.handle, displayName: res.displayName });
             }
-            return jsonResult({ found: true, isContact: false, handle, note: "User exists but is not your contact. Use add_friend to connect." });
+            return jsonResult({ found: true, isContact: false, handle: res.handle, note: "User exists but is not your contact. Use add_friend to connect." });
           } catch (e) {
-            return jsonResult({ found: false, handle, error: (e as Error).message });
+            const msg = (e as Error).message;
+            if (msg.includes("not found") || msg.includes("404")) {
+              // Fallback for relay <0.2.0 that doesn't have GET /users/:handle
+              try {
+                const contacts = await client.getContacts();
+                const found = contacts.contacts.find((c) => c.handle === handle);
+                if (found) {
+                  return jsonResult({ found: true, isContact: true, handle });
+                }
+              } catch { /* ignore fallback errors */ }
+              return jsonResult({ found: false, handle });
+            }
+            return jsonResult({ found: false, handle, error: msg });
           }
         },
       },
@@ -150,7 +161,32 @@ export function registerTools(api: OpenClawPluginApi, client: RelayClient) {
           }
         },
       },
+      {
+        name: "remove_friend",
+        label: "Remove ConnectClaw friend",
+        description:
+          "Remove a user from your contacts (unfriend). This is mutual — both sides lose the contact.",
+        parameters: {
+          type: "object",
+          properties: {
+            handle: {
+              type: "string",
+              description: "Handle of the contact to remove",
+            },
+          },
+          required: ["handle"],
+        },
+        async execute(_toolCallId: string, params: Record<string, unknown>) {
+          const handle = params.handle as string;
+          try {
+            await client.removeContact(handle);
+            return jsonResult({ status: "removed", handle });
+          } catch (e) {
+            return jsonResult({ error: (e as Error).message });
+          }
+        },
+      },
     ],
-    { names: ["get_contacts", "send_message", "get_messages", "find_user", "add_friend", "list_friend_requests", "accept_friend"] }
+    { names: ["get_contacts", "send_message", "get_messages", "find_user", "add_friend", "list_friend_requests", "accept_friend", "remove_friend"] }
   );
 }

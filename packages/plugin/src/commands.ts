@@ -64,7 +64,7 @@ export function registerCommands(
   api.registerCommand({
     name: "friends",
     description:
-      "Manage friends. Usage: /friends | /friends add <handle> | /friends requests | /friends accept <handle> | /friends reject <handle>",
+      "Manage friends. Usage: /friends | /friends add <handle> | /friends requests | /friends accept <handle> | /friends reject <handle> | /friends remove <handle>",
     acceptsArgs: true,
     requireAuth: true,
     handler: async (ctx) => {
@@ -178,8 +178,19 @@ export function registerCommands(
           return { text: `Friend request from "${arg}" rejected.` };
         }
 
+        if (subcommand === "remove") {
+          if (!arg) {
+            return {
+              text: "Usage: /friends remove <handle>",
+              isError: true,
+            };
+          }
+          await client.removeContact(arg);
+          return { text: `"${arg}" removed from your contacts.` };
+        }
+
         return {
-          text: "Unknown subcommand. Usage: /friends [list|add|requests|accept|reject]",
+          text: "Unknown subcommand. Usage: /friends [list|add|requests|accept|reject|remove]",
           isError: true,
         };
       } catch (e) {

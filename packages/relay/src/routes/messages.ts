@@ -4,6 +4,8 @@ import { randomUUID } from "node:crypto";
 import { db, schema } from "../db/index.js";
 import { authMiddleware } from "../lib/auth.js";
 
+const MAX_MESSAGE_LENGTH = 4096;
+
 const app = new Hono();
 
 app.use(authMiddleware);
@@ -14,6 +16,14 @@ app.post("/messages/send", async (c) => {
 
   if (!body.contactId || !body.content?.trim()) {
     return c.json({ error: "contactId and content are required" }, 400);
+  }
+
+  const trimmed = body.content.trim();
+  if (trimmed.length > MAX_MESSAGE_LENGTH) {
+    return c.json(
+      { error: `Message too long. Maximum ${MAX_MESSAGE_LENGTH} characters.` },
+      400
+    );
   }
 
   const contact = await db
@@ -36,17 +46,15 @@ app.post("/messages/send", async (c) => {
     id,
     fromId: user.id,
     toId: contact.friendId,
-    content: body.content.trim(),
+    content: trimmed,
     createdAt: Date.now(),
   });
 
   return c.json({ id, status: "sent" }, 201);
 });
 
-app.get("/messages/inbox", async (c) => {
-  const user = c.get("user");
-
-  const rows = await db
+function inboxQuery(userId: string) {
+  return db
     .select({
       id: schema.messages.id,
       fromHandle: schema.users.handle,
@@ -55,11 +63,21 @@ app.get("/messages/inbox", async (c) => {
     })
     .from(schema.messages)
     .innerJoin(schema.users, eq(schema.users.id, schema.messages.fromId))
-    .where(
-      and(eq(schema.messages.toId, user.id), isNull(schema.messages.deliveredAt))
+    .innerJoin(
+      schema.contacts,
+      and(
+        eq(schema.contacts.userId, schema.messages.toId),
+        eq(schema.contacts.friendId, schema.messages.fromId)
+      )
     )
-    .all();
+    .where(
+      and(eq(schema.messages.toId, userId), isNull(schema.messages.deliveredAt))
+    );
+}
 
+app.get("/messages/inbox", async (c) => {
+  const user = c.get("user");
+  const rows = await inboxQuery(user.id).all();
   return c.json({ messages: rows });
 });
 
@@ -70,22 +88,7 @@ app.get("/messages/poll", async (c) => {
   const deadline = Date.now() + timeout * 1000;
 
   while (Date.now() < deadline) {
-    const rows = await db
-      .select({
-        id: schema.messages.id,
-        fromHandle: schema.users.handle,
-        content: schema.messages.content,
-        createdAt: schema.messages.createdAt,
-      })
-      .from(schema.messages)
-      .innerJoin(schema.users, eq(schema.users.id, schema.messages.fromId))
-      .where(
-        and(
-          eq(schema.messages.toId, user.id),
-          isNull(schema.messages.deliveredAt)
-        )
-      )
-      .all();
+    const rows = await inboxQuery(user.id).all();
 
     if (rows.length > 0) {
       return c.json({ messages: rows });

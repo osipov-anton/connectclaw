@@ -124,6 +124,20 @@ export class RelayClient {
     );
   }
 
+  findUser(handle: string) {
+    return this.request<{ handle: string; displayName: string | null; isContact: boolean }>(
+      "GET",
+      `/users/${encodeURIComponent(handle)}`
+    );
+  }
+
+  removeContact(handle: string) {
+    return this.request<{ status: string; handle: string }>(
+      "DELETE",
+      `/contacts/${encodeURIComponent(handle)}`
+    );
+  }
+
   sendMessage(contactId: string, content: string) {
     return this.request<{ id: string; status: string }>(
       "POST",

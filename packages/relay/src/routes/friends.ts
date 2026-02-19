@@ -46,7 +46,7 @@ app.post("/friends/request", async (c) => {
     return c.json({ error: "Already friends." }, 409);
   }
 
-  const existingRequest = await db
+  const existingPending = await db
     .select()
     .from(schema.friendRequests)
     .where(
@@ -66,8 +66,32 @@ app.post("/friends/request", async (c) => {
     )
     .get();
 
-  if (existingRequest) {
+  if (existingPending) {
     return c.json({ error: "A pending friend request already exists." }, 409);
+  }
+
+  const REJECT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+  const recentRejection = await db
+    .select()
+    .from(schema.friendRequests)
+    .where(
+      and(
+        eq(schema.friendRequests.fromId, user.id),
+        eq(schema.friendRequests.toId, target.id),
+        eq(schema.friendRequests.status, "rejected")
+      )
+    )
+    .all();
+
+  const recentlyRejected = recentRejection.some(
+    (r) => Date.now() - r.createdAt < REJECT_COOLDOWN_MS
+  );
+
+  if (recentlyRejected) {
+    return c.json(
+      { error: "This user recently declined your request. Try again later." },
+      429
+    );
   }
 
   const id = randomUUID();

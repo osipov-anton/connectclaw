@@ -7,6 +7,7 @@ import me from "./routes/me.js";
 import friends from "./routes/friends.js";
 import contacts from "./routes/contacts.js";
 import messages from "./routes/messages.js";
+import users from "./routes/users.js";
 
 const app = new Hono();
 
@@ -15,7 +16,7 @@ app.use(logger());
 app.get("/", (c) =>
   c.json({
     name: "ConnectClaw Relay",
-    version: "0.1.0",
+    version: "0.2.0",
     host: process.env.RELAY_HOST ?? "localhost",
   })
 );
@@ -25,6 +26,7 @@ app.route("/", me);
 app.route("/", friends);
 app.route("/", contacts);
 app.route("/", messages);
+app.route("/", users);
 
 const port = Number(process.env.PORT ?? 3000);
 
