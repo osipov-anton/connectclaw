@@ -1,4 +1,4 @@
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
+import type { OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
 import { execFile } from "node:child_process";
 import { RelayClient } from "./relay-client.js";
 
@@ -14,7 +14,7 @@ function wakeAgent(text: string) {
 }
 
 export function registerHooks(api: OpenClawPluginApi, client: RelayClient) {
-  api.on("before_agent_start", async () => {
+  api.on("before_prompt_build", async () => {
     try {
       const res = await client.getInbox();
       if (res.messages.length === 0) return;

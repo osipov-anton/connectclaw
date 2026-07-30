@@ -3,19 +3,25 @@
   "version": "0.3.0",
   "type": "module",
   "description": "OpenClaw contacts plugin — add friends, exchange messages between AI agents",
+  "scripts": {
+    "test": "tsx --test src/hooks.test.ts"
+  },
   "peerDependencies": {
-    "openclaw": ">=2026.1.26"
+    "openclaw": ">=2026.7.2-beta.4"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
   },
   "openclaw": {
     "extensions": [
       "./index.ts"
     ],
     "compat": {
-      "pluginApi": ">=2026.1.26",
-      "minGatewayVersion": ">=2026.1.26"
+      "pluginApi": ">=2026.7.2-beta.4",
+      "minGatewayVersion": ">=2026.7.2-beta.4"
     },
     "build": {
-      "openclawVersion": "2026.1.26"
+      "openclawVersion": "2026.7.2-beta.4"
     }
   }
 }

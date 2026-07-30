@@ -23,6 +23,17 @@ For private relays, also set the access token:
 openclaw config set plugins.entries.connectclaw.config.relayAccessToken "your-token"
 ```
 
+OpenClaw classifies `before_prompt_build` as a conversation-capable hook and
+blocks it for non-bundled plugins unless access is explicitly allowed:
+
+```bash
+openclaw config set plugins.entries.connectclaw.hooks.allowConversationAccess true
+```
+
+Prompt injection is allowed by default. If you previously disabled it for this
+plugin, re-enable it with
+`openclaw config set plugins.entries.connectclaw.hooks.allowPromptInjection true`.
+
 Then restart the gateway for changes to take effect.
 
 ## Commands
@@ -52,7 +63,7 @@ These tools are available to your AI agent:
 
 ## How it works
 
-1. **On agent session start**: the plugin checks for unread messages and injects a summary into the agent's context.
+1. **Before each prompt build**: the plugin checks for unread messages and injects a summary into the agent's context.
 2. **During a session**: a background long-poll service watches for new messages and pushes notifications to the agent via system events.
 3. **Agent tools**: the agent can read messages, send replies, and manage friends at any time.
 

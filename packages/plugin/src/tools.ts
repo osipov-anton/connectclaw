@@ -1,5 +1,5 @@
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
-import { jsonResult } from "openclaw/plugin-sdk";
+import type { OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
+import { jsonResult } from "openclaw/plugin-sdk/tool-results";
 import { RelayClient } from "./relay-client.js";
 
 export function registerTools(api: OpenClawPluginApi, client: RelayClient) {
